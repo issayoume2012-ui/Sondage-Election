@@ -1,22 +1,36 @@
 import streamlit as st
-import pandas as pd
-import os
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
-# ==========================
-# CONFIGURATION ADMIN
-# ==========================
-MOT_DE_PASSE_ADMIN = "monsecret123"  # change ce mot de passe
+# ==================================================
+# CONFIGURATION EMAIL (CACHÉE)
+# ==================================================
+EMAIL_EXPEDITEUR = st.secrets["EMAIL_EXPEDITEUR"]
+MOT_DE_PASSE_APP = st.secrets["MOT_DE_PASSE_APP"]
+EMAIL_DESTINATAIRE = st.secrets["EMAIL_DESTINATAIRE"]
 
-# ==========================
+# ==================================================
+# CONFIGURATION PAGE
+# ==================================================
+st.set_page_config(
+    page_title="Sondage Présidentiel",
+    page_icon="🗳️",
+    layout="centered"
+)
+
+# ==================================================
 # TITRE
-# ==========================
+# ==================================================
 st.header("🗳️ Sondage pour les élections présidentielles")
 st.subheader("Tous les votes comptent. Ta voix, ton vote.")
 
-# ==========================
-# FORMULAIRE DE VOTE
-# ==========================
-nom = st.text_input("Veuillez donner votre Prénom et Nom")
+# ==================================================
+# FORMULAIRE
+# ==================================================
+nom = st.text_input(
+    "Veuillez donner votre Prénom et Nom"
+)
 
 date_naissance = st.date_input(
     "Saisir ta date de naissance"
@@ -36,7 +50,10 @@ travail = st.selectbox(
 )
 
 st.info("Cochez si vous êtes électeur éligible")
-electeur = st.checkbox("Électeur Éligible")
+
+electeur = st.checkbox(
+    "Électeur Éligible"
+)
 
 candidat = st.selectbox(
     "Quel candidat voteras-tu ?",
@@ -48,18 +65,74 @@ candidat = st.selectbox(
     ]
 )
 
-raison = st.text_area("Pourquoi ce candidat ?")
+raison = st.text_area(
+    "Pourquoi ce candidat ?"
+)
 
-st.info("Merci pour le vote")
+st.info("Merci pour votre vote")
 
-# ==========================
-# BOUTON ENVOYER
-# ==========================
-if st.button("Envoyer"):
+# ==================================================
+# FONCTION EMAIL
+# ==================================================
+def envoyer_email():
 
-    if nom == "" or candidat == "":
+    sujet = "🗳️ Nouveau Vote Présidentiel"
+
+    contenu = f"""
+NOUVEAU VOTE REÇU
+
+Nom : {nom}
+
+Date de naissance : {date_naissance}
+
+Travail : {travail}
+
+Électeur éligible : {"Oui" if electeur else "Non"}
+
+Candidat choisi : {candidat}
+
+Pourquoi ce candidat :
+{raison}
+"""
+
+    message = MIMEMultipart()
+    message["From"] = EMAIL_EXPEDITEUR
+    message["To"] = EMAIL_DESTINATAIRE
+    message["Subject"] = sujet
+
+    message.attach(
+        MIMEText(contenu, "plain")
+    )
+
+    serveur = smtplib.SMTP(
+        "smtp.gmail.com",
+        587
+    )
+
+    serveur.starttls()
+
+    serveur.login(
+        EMAIL_EXPEDITEUR,
+        MOT_DE_PASSE_APP
+    )
+
+    serveur.send_message(message)
+
+    serveur.quit()
+
+# ==================================================
+# ENVOYER
+# ==================================================
+if st.button("📨 Envoyer"):
+
+    if nom.strip() == "":
         st.warning(
-            "Veuillez remplir le nom et choisir un candidat."
+            "Veuillez entrer votre nom."
+        )
+
+    elif candidat == "":
+        st.warning(
+            "Veuillez choisir un candidat."
         )
 
     elif not electeur:
@@ -68,63 +141,16 @@ if st.button("Envoyer"):
         )
 
     else:
-        vote = {
-            "Nom": nom,
-            "Date de naissance": str(date_naissance),
-            "Travail": travail,
-            "Candidat": candidat,
-            "Pourquoi": raison
-        }
+        try:
+            envoyer_email()
 
-        df_vote = pd.DataFrame([vote])
-
-        fichier = "votes.csv"
-
-        if os.path.exists(fichier):
-            ancien_df = pd.read_csv(fichier)
-            nouveau_df = pd.concat(
-                [ancien_df, df_vote],
-                ignore_index=True
-            )
-            nouveau_df.to_csv(
-                fichier,
-                index=False
-            )
-        else:
-            df_vote.to_csv(
-                fichier,
-                index=False
+            st.success(
+                "✅ Vote envoyé avec succès !"
             )
 
-        st.success("✅ Vote envoyé avec succès !")
+            st.balloons()
 
-# ==========================
-# ESPACE ADMIN (PRIVÉ)
-# ==========================
-st.divider()
-st.subheader("🔒 Accès Administrateur")
-
-mot_de_passe = st.text_input(
-    "Entrer le mot de passe admin",
-    type="password"
-)
-
-if mot_de_passe == MOT_DE_PASSE_ADMIN:
-
-    st.success("Connexion administrateur réussie")
-
-    if os.path.exists("votes.csv"):
-        df = pd.read_csv("votes.csv")
-
-        st.write("### 📋 Résultats des votes")
-        st.dataframe(df)
-
-        st.write("### 📊 Résultat du sondage")
-        resultat = df["Candidat"].value_counts()
-        st.bar_chart(resultat)
-
-    else:
-        st.info("Aucun vote enregistré.")
-
-elif mot_de_passe != "":
-    st.error("Mot de passe incorrect")
+        except Exception as e:
+            st.error(
+                f"Erreur : {e}"
+            )
