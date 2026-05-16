@@ -1,0 +1,12 @@
+import streamlit as st
+st.header("Sondage pour les elections présidentielles")
+st.subheader("Tous les votes Comptent. Ta voix, ton vote.") 
+st.text_input("Veuillez donner votre Prenom et Nom")
+st.text_input("Saissir ta date de naissance")
+st.selectbox("Votre travail",[" ","Fonctionnaire","Etudiant","Sans-emploi","Ouvrier","Retraité","autre"])
+st.info("Cochez si vous êtes électeurs eligibles")
+st.checkbox("Electeur Eligible")
+st.selectbox("Quel Candidat voteras-tu",["","Moussa Diagne","Samba Ba","ALD"])
+st.text_area("Pourquoi ce Candidat")
+st.info("Merci Pour le Vote")
+st.button("Envoyer")
