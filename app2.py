@@ -9,8 +9,6 @@ st.title("🗳️ Sondage Présidentiel")
 st.subheader("Tous les votes comptent")
 
 nom = st.text_input("Prénom et Nom")
-date_naissance = st.date_input("Date de naissance")
-
 travail = st.selectbox(
     "Votre travail",
     [
